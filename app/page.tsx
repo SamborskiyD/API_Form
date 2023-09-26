@@ -1,6 +1,6 @@
 
 import styles from '@/styles/page.module.scss'
-import FormikForm from '@/components/FormikForm'
+import Form from '@/components/Form'
 
 async function getData(category: string) {
   let res
@@ -29,7 +29,7 @@ export default async function Home() {
 
   return (
     <main className={styles.main}>
-      <FormikForm cities={cities} doctors={doctors} specialties={specialties} />
+      <Form cities={cities} doctors={doctors} specialties={specialties} />
     </main>
   )
 }

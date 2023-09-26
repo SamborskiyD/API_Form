@@ -12,11 +12,14 @@
     "@types/node": "20.6.3",
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
-    "formik": "^2.4.5",
     "next": "13.5.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-hook-form": "^7.46.2",
     "sass": "^1.68.0",
     "typescript": "5.2.2"
+  },
+  "devDependencies": {
+    "@hookform/devtools": "^4.3.1"
   }
 }

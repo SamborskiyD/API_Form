@@ -3,8 +3,8 @@
 import styles from '@/styles/page.module.scss'
 
 import type { City, Doctor, Speciality, FormProps } from '@/types/Types'
-import { useFormik, FormikProps } from 'formik'
 import { useMemo } from 'react'
+import { useForm } from 'react-hook-form'
 
 interface FormValues {
     name: string,
@@ -16,34 +16,24 @@ interface FormValues {
     doctorId: string,
 }
 
-const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
 
-    const { values, handleChange, handleSubmit }: FormikProps<FormValues> = useFormik<FormValues>({
-        initialValues: {
-            name: '',
-            email: '',
-            date: '',
-            sex: '',
-            cityId: '',
-            specialityId: '',
-            doctorId: '',
-        },
-        onSubmit: (values) => {
-            alert(JSON.stringify(values))
-        }
-    })
+const Form = ({ cities, doctors, specialties }: FormProps) => {
+
+    const { register, handleSubmit, watch, getValues, setValue, formState } = useForm<FormValues>()
+    const { errors } = formState
 
     const filterDoctors = () => {
         let response = doctors
-        if(values.date){
+        const values = getValues()
+        if (values.date) {
             let birthday = new Date(values.date)
             let age = new Date(Date.now() - birthday.getTime()).getUTCFullYear() - 1970
             response = response.filter(doctor => age < 18 === doctor.isPediatrician)
         }
-        if(values.cityId){
+        if (values.cityId) {
             response = response.filter(doctor => doctor.cityId === values.cityId)
         }
-        if(values.specialityId){
+        if (values.specialityId) {
             response = response.filter(doctor => doctor.specialityId === values.specialityId)
         }
         return response
@@ -51,35 +41,52 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
 
     const filterSpecialties = () => {
         let response = specialties
-        if(values.sex){
-            response = response.filter(speciality => speciality.params?.gender === values.sex || !speciality.params?.gender)
+        const sex = getValues('sex')
+        if (sex) {
+            response = response.filter(speciality => speciality.params?.gender === sex || !speciality.params?.gender)
+            setValue('specialityId', '')
         }
         return response
     }
 
+    const setDoctorInfo = () => {
+        const doctorId = parseInt(getValues('doctorId'))
+        setValue('cityId', doctors[doctorId]?.cityId)
+        setValue('specialityId', doctors[doctorId]?.specialityId)
+    }
+
     const filteredDoctors = useMemo(() => {
         return filterDoctors()
-    }, [values.date, values.cityId, values.specialityId])
+    }, [watch(['date', 'cityId', 'specialityId'])])
 
 
     const filteredSpecialties = useMemo(() => {
         return filterSpecialties()
-    }, [values.sex])
+    }, [watch('sex')])
+
+
+    const onSubmit = (data: FormValues) => {
+        alert(JSON.stringify(data))
+    }
 
     return (
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
 
             <div className={styles.field}>
                 <label htmlFor="name" className={styles.label}>Name</label>
                 <input
                     type="text"
                     id='name'
-                    name='name'
                     className={styles.input}
-                    value={values.name}
-                    onChange={handleChange}
-                    required
+                    {...register('name', {
+                        required: 'Name is required',
+                        pattern: {
+                            value: /^[a-zA-Z]+$/i,
+                            message: "Name should containe only latin letters"
+                        }
+                    })}
                 />
+                <p className={styles.error}>{errors.name?.message}</p>
             </div>
 
             <div className={styles.field}>
@@ -87,12 +94,16 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
                 <input
                     type="email"
                     id='email'
-                    name='email'
                     className={styles.input}
-                    value={values.email}
-                    onChange={handleChange}
-                    required
+                    {...register('email', {
+                        required: 'Email is required',
+                        pattern: {
+                            value: /^[A-Za-z0-9_!#$%&'*+\/=?`{|}~^.-]+@[A-Za-z0-9.-]+$/,
+                            message: "Invalid email"
+                        }
+                    })}
                 />
+                <p className={styles.error}>{errors.email?.message}</p>
             </div>
 
             <div className={styles.field}>
@@ -100,39 +111,43 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
                 <input
                     type="date"
                     id='date'
-                    name='date'
+
                     className={styles.input}
-                    value={values.date}
-                    onChange={handleChange}
-                    required
+                    {...register('date', {
+                        required: 'Date is required',
+                        min: {
+                            value:'01/01/1920',
+                            message: 'Date is out of range'
+                        },
+                    })}
                 />
+                <p className={styles.error}>{errors.date?.message}</p>
             </div>
 
             <div className={styles.field}>
                 <label htmlFor="sex" className={styles.label}>Sex</label>
                 <select
                     id='sex'
-                    name='sex'
                     className={styles.input}
-                    value={values.sex}
-                    onChange={handleChange}
-                    required
+                    {...register('sex', {
+                        required: 'Sex is required',
+                    })}
                 >
                     <option value="" hidden>Choose sex</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                 </select>
+                <p className={styles.error}>{errors.sex?.message}</p>
             </div>
 
             <div className={styles.field}>
                 <label htmlFor="cityId" className={styles.label}>City</label>
                 <select
                     id='cityId'
-                    name='cityId'
                     className={styles.input}
-                    value={values.cityId}
-                    onChange={handleChange}
-                    required
+                    {...register('cityId', {
+                        required: 'City is required',
+                    })}
                 >
                     <option value="" hidden>Choose city</option>
                     {cities.map((city: City) => (
@@ -140,16 +155,16 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
                     ))}
 
                 </select>
+                <p className={styles.error}>{errors.cityId?.message}</p>
             </div>
 
             <div className={styles.field}>
                 <label htmlFor="specialityId" className={styles.label}>Doctor Speciality</label>
                 <select
                     id='specialityId'
-                    name='specialityId'
                     className={styles.input}
-                    value={values.specialityId}
-                    onChange={handleChange}
+                    {...register('specialityId')}
+
                 >
                     <option value="" hidden>Choose speciality</option>
                     {filteredSpecialties.map((speciality: Speciality) => (
@@ -162,11 +177,10 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
                 <label htmlFor="doctorId" className={styles.label}>Doctor</label>
                 <select
                     id='doctorId'
-                    name='doctorId'
                     className={styles.input}
-                    value={values.doctorId}
-                    onChange={handleChange}
-                    required
+                    {...register('doctorId', {
+                        required: 'Doctor is required',
+                    })}
                 >
                     <option value="" hidden>Choose doctor</option>
                     {filteredDoctors.map((doctor: Doctor) => (
@@ -174,6 +188,7 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
                     ))}
 
                 </select>
+                <p className={styles.error}>{errors.doctorId?.message}</p>
             </div>
 
             <button className={styles.button} type='submit'>Submit</button>
@@ -181,4 +196,4 @@ const FormikForm = ({ cities, doctors, specialties }: FormProps) => {
     )
 }
 
-export default FormikForm
+export default Form
