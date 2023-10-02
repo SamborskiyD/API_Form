@@ -3,7 +3,8 @@
 import styles from '@/styles/page.module.scss'
 
 import type { City, Doctor, Speciality, FormProps } from '@/types/Types'
-import { useMemo } from 'react'
+import { subscribe } from 'diagnostics_channel'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 
 interface FormValues {
@@ -22,12 +23,16 @@ const Form = ({ cities, doctors, specialties }: FormProps) => {
     const { register, handleSubmit, watch, getValues, setValue, formState } = useForm<FormValues>()
     const { errors } = formState
 
+    const calculateAge = (date: string) => {
+        let birthday = new Date(date)
+        return  new Date(Date.now() - birthday.getTime()).getUTCFullYear() - 1970
+    }
+
     const filterDoctors = () => {
         let response = doctors
         const values = getValues()
         if (values.date) {
-            let birthday = new Date(values.date)
-            let age = new Date(Date.now() - birthday.getTime()).getUTCFullYear() - 1970
+            let age = calculateAge(values.date)
             response = response.filter(doctor => age < 18 === doctor.isPediatrician)
         }
         if (values.cityId) {
@@ -41,19 +46,27 @@ const Form = ({ cities, doctors, specialties }: FormProps) => {
 
     const filterSpecialties = () => {
         let response = specialties
-        const sex = getValues('sex')
-        if (sex) {
-            response = response.filter(speciality => speciality.params?.gender === sex || !speciality.params?.gender)
+        const values = getValues()
+        if (values.date) {
+            let age = calculateAge(values.date)
+            response = response.filter(speciality =>
+                (!speciality.params?.minAge && !speciality.params?.maxAge) ||
+                speciality.params?.minAge < age ||
+                speciality.params?.maxAge > age)
+            setValue('specialityId', '')
+        }
+        if (values.sex) {
+            response = response.filter(speciality => speciality.params?.gender === values.sex || !speciality.params?.gender)
             setValue('specialityId', '')
         }
         return response
     }
 
-    const setDoctorInfo = () => {
-        const doctorId = parseInt(getValues('doctorId'))
-        setValue('cityId', doctors[doctorId]?.cityId)
-        setValue('specialityId', doctors[doctorId]?.specialityId)
-    }
+    // const setDoctorInfo = () => {
+    //     const doctorId = parseInt(getValues('doctorId'))
+    //     setValue('cityId', doctors[doctorId]?.cityId)
+    //     setValue('specialityId', doctors[doctorId]?.specialityId)
+    // }
 
     const filteredDoctors = useMemo(() => {
         return filterDoctors()
@@ -62,8 +75,11 @@ const Form = ({ cities, doctors, specialties }: FormProps) => {
 
     const filteredSpecialties = useMemo(() => {
         return filterSpecialties()
-    }, [watch('sex')])
+    }, [watch(['date', 'sex'])])
 
+    // useMemo(() => {
+    //     return setDoctorInfo()
+    // }, [watch('doctorId')])
 
     const onSubmit = (data: FormValues) => {
         alert(JSON.stringify(data))
@@ -116,7 +132,7 @@ const Form = ({ cities, doctors, specialties }: FormProps) => {
                     {...register('date', {
                         required: 'Date is required',
                         min: {
-                            value:'01/01/1920',
+                            value: '01/01/1920',
                             message: 'Date is out of range'
                         },
                     })}
@@ -163,7 +179,14 @@ const Form = ({ cities, doctors, specialties }: FormProps) => {
                 <select
                     id='specialityId'
                     className={styles.input}
-                    {...register('specialityId')}
+                    {...register('specialityId', {
+                        validate: {
+                            spesialityMinAge: (value) => {
+                                let date = getValues('date')
+                                return ''
+                            },
+                        }
+                    })}
 
                 >
                     <option value="" hidden>Choose speciality</option>

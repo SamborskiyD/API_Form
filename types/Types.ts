@@ -17,9 +17,9 @@ export type Speciality = {
     id: string,
     name: string,
     params?: {
-        gender?: string,
-        minAge?: number,
-        maxAge?: number
+        gender: string,
+        minAge: number,
+        maxAge: number
     }
 }
 
